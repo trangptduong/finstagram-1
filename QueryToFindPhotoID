@@ -1,0 +1,24 @@
+// finding photoIDs of photos that are visible to the user whose username is TestUser
+// a photo p is only visible to a user U if and only if 
+// - Allfollowers == True for p
+// - U has been accepted as a follower by p's photoPoster
+// - OR p is shared with a friendGroup that U belongs to
+
+//In this case we assume our user is Abby
+
+SELECT photoID 
+FROM photo 
+WHERE photoID IN(
+      SELECT photoID
+      FROM photo
+      WHERE photoPoster = 'abby' 
+      OR photoID IN(
+    	              SELECT photoID
+		      FROM photo JOIN follow ON (photoPoster = username_followed)
+                      WHERE (allFollowers = True AND username_follower = 'abby' AND followstatus = True)
+    	              OR photoID IN( 
+                                  	SELECT photoID
+                	                FROM friendgroup AS F 
+                	                JOIN belongto As B ON F.groupName = B.groupName AND F.groupOwner = B.owner_username 
+                	                JOIN sharedwith AS S ON F.groupName = S.groupName AND F.groupOwner = S.groupOwner
+                	                WHERE member_username = 'abby')))
