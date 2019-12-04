@@ -159,7 +159,7 @@ def logout():
     return redirect("/")
 
 
-@app.route("/uploadImage", methods=["POST"])
+@app.route("/uploadImage", methods=["GET","POST"])
 @login_required
 def upload_image():
     # grabs information from the forms
@@ -168,8 +168,14 @@ def upload_image():
     caption = request.form['caption']
     allFollowers = request.form['allFollowers']
 
+
+
     # cursor used to send queries
     cursor = connection.cursor()
+
+
+
+    #return render_template('select_blogger.html', group_list=data)
 
 
     ins = 'INSERT INTO photo(postingdate, photoPoster, filePath, caption, allFollowers) VALUES(%s, %s, %s, %s, %s)'
@@ -178,11 +184,80 @@ def upload_image():
     cursor.close()
     return render_template('home.html')
 
-@app.route("/followUser", methods=["POST"])
+@app.route("/followUser", methods=["GET","POST"])
 @login_required
 def followUser():
+    return render_template('followUser.html')
 
-    return render_template('home.html')
+
+
+@app.route("/followUserAuth", methods=["POST"])
+def followUserAuth():
+    if request.form:
+        requestData = request.form
+        follower = session['username']
+        followee = requestData["followee"]
+
+        #hashedPassword = hashlib.sha256(plaintextPasword.encode("utf-8")).hexdigest()
+
+        with connection.cursor() as cursor:
+            query = "SELECT * FROM person WHERE username = %s"
+            cursor.execute(query, (followee))
+            data = cursor.fetchone()
+            if not data:
+                error = "Cannot find that user"
+                return render_template("followUser.html", error=error)
+
+            follow = "INSERT INTO Follow (username_followed, username_follower, followstatus) VALUES (%s, %s, 0)"
+            cursor.execute(follow, (followee, follower))
+            return redirect(url_for("home"))
+
+    error = "An unknown error has occurred. Please try again."
+    return render_template("login.html", error=error)
+
+
+@app.route('/followRequest')
+def followRequest():
+    # check that user is logged in
+    username = session['username']
+    # should throw exception if username not found
+
+    cursor = connection.cursor();
+    query = 'SELECT DISTINCT username_follower FROM Follow WHERE username_followed = %s AND followstatus = 0'
+    cursor.execute(query, (username))
+    data = cursor.fetchall()
+    cursor.close()
+    return render_template('followRequest.html', user_list=data)
+
+
+@app.route('/acceptFollow', methods=["GET", "POST"])
+def show_posts():
+    follower = request.args['follower']
+    username = session['username']
+    cursor = connection.cursor();
+    query = 'UPDATE Follow SET followstatus = 1 WHERE username_follower = %s AND username_followed = %s'
+    cursor.execute(query, (follower, username))
+    data = cursor.fetchall()
+    cursor.close()
+    return render_template('followRequest.html')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 if __name__ == "__main__":
